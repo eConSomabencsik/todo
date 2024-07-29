@@ -1,0 +1,4 @@
+PyQt5==5.15.11
+screeninfo==0.8.1
+pydarktheme==2.1.0
+pyqt-custom-titlebar-window==0.0.50
