@@ -1,6 +1,11 @@
+from __future__ import annotations
+
 from typing import List, Union
 
+import keyboard
 import qdarktheme
+
+# pylint: disable = no-name-in-module
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
     QAction,
@@ -50,6 +55,8 @@ class MainWindow(QMainWindow):
 
         self.todos = read_todos()
 
+        self.focus_on = False
+
         self.setup_ui()
 
         menu_bar = self.menuBar()
@@ -78,42 +85,16 @@ class MainWindow(QMainWindow):
         )
         menu_bar.addMenu(edit_menu)
 
+        keyboard.on_press(self.keyboard_event)
+
     def setup_ui(self) -> None:
         main_widget = QWidget()
         main_layout = QHBoxLayout()
 
+        TodoWidget.objects = []
         for idx, todo_list in enumerate(self.todos):
-            todo_list_widget = QVBoxLayout()
-
-            title_label = QLabel(todo_list)
-            title_font = title_label.font()
-            title_font.setBold(True)
-            title_font.setPointSize(20)
-            title_label.setFont(title_font)
-
-            # title_label.setStyleSheet("font-size: 20px; font-weight: bold;")
-            title_label.setAlignment(Qt.AlignCenter)
-            todo_list_widget.addWidget(title_label)
-
-            separator = QFrame()
-            separator.setFrameShape(QFrame.HLine)
-            separator.setFrameShadow(QFrame.Plain)
-            todo_list_widget.addWidget(separator)
-
-            for todo in self.todos[todo_list]:
-                todo_message = todo.split(" (Completed)")[0]
-                completed = " (Completed)" in todo
-                todo_widget = TodoWidget(todo_list, todo_message, completed)
-                todo_widget.deleted.connect(self.refresh_todos)
-                todo_list_widget.addWidget(todo_widget)
-                separator = QFrame()
-                separator.setFrameShape(QFrame.HLine)
-                separator.setFrameShadow(QFrame.Plain)
-                todo_list_widget.addWidget(separator)
-
-            spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-            todo_list_widget.addItem(spacer)
-            main_layout.addLayout(todo_list_widget, stretch=1)
+            todo_list_widget = TodoListWidget(todo_list, self.todos[todo_list])
+            main_layout.addWidget(todo_list_widget)
 
             if idx < len(self.todos) - 1:
                 separator = QFrame()
@@ -182,14 +163,137 @@ class MainWindow(QMainWindow):
             if w is not None:
                 w.deleteLater()
                 w.setParent(None)
-            l = layout.itemAt(i).layout()
+            try:
+                l = layout.itemAt(i).layout()
+            except AttributeError:
+                continue
             if l is not None:
                 self.delete_widgets_from_layout(l)
+
+    def keyboard_event(self, event: keyboard.KeyboardEvent):
+        if event.event_type != "down":
+            return
+        if event.name == "tab":
+            if not self.focus_on:
+                self.focus_on = True
+                TodoWidget.objects[0].set_focused(True)
+            else:
+                self.focus_on = False
+                for todo_widget in TodoWidget.objects:
+                    todo_widget.set_focused(False)
+        elif event.name == "space":
+            for todo_widget in TodoWidget.objects:
+                if todo_widget.is_focused:
+                    todo_widget.completed_checkbox.setChecked(
+                        not todo_widget.completed_checkbox.isChecked()
+                    )
+                    break
+        elif event.name == "left":
+            stop = False
+            for todo_widget in TodoWidget.objects:
+                if todo_widget.is_focused:
+                    todo_widget.set_focused(False)
+
+                    for idx, todo_list_widget in enumerate(TodoListWidget.objects):
+                        if todo_list_widget.todo_list != todo_widget.todo_list:
+                            continue
+
+                        next_idx = idx - 1
+                        if next_idx < 0:
+                            next_idx = len(TodoListWidget.objects) - 1
+
+                        next_todo = TodoListWidget.objects[next_idx].todos[0]
+                        for next_todo_widget in TodoWidget.objects:
+                            if next_todo_widget.todo in next_todo:
+                                next_todo_widget.set_focused(True)
+                                stop = True
+                                break
+                    if stop:
+                        break
+        elif event.name == "right":
+            stop = False
+            for todo_widget in TodoWidget.objects:
+                if todo_widget.is_focused:
+                    todo_widget.set_focused(False)
+
+                    for idx, todo_list_widget in enumerate(TodoListWidget.objects):
+                        if todo_list_widget.todo_list != todo_widget.todo_list:
+                            continue
+
+                        next_idx = idx + 1
+                        if next_idx >= len(TodoListWidget.objects):
+                            next_idx = 0
+
+                        next_todo = TodoListWidget.objects[next_idx].todos[0]
+                        for next_todo_widget in TodoWidget.objects:
+                            if next_todo_widget.todo in next_todo:
+                                next_todo_widget.set_focused(True)
+                                stop = True
+                                break
+                    if stop:
+                        break
+        elif event.name == "up":
+            stop = False
+            for todo_widget in TodoWidget.objects:
+                if todo_widget.is_focused:
+                    todo_widget.set_focused(False)
+
+                    for todo_list_widget in TodoListWidget.objects:
+                        if todo_list_widget.todo_list != todo_widget.todo_list:
+                            continue
+
+                        for idx, todo in enumerate(todo_list_widget.todos):
+                            if todo_widget.todo in todo:
+                                current_idx = idx
+                                break
+
+                        next_idx = current_idx - 1
+                        if next_idx < 0:
+                            next_idx = len(todo_list_widget.todos) - 1
+
+                        next_todo = todo_list_widget.todos[next_idx]
+                        for next_todo_widget in TodoWidget.objects:
+                            if next_todo_widget.todo in next_todo:
+                                next_todo_widget.set_focused(True)
+                                stop = True
+                                break
+                if stop:
+                    break
+        elif event.name == "down":
+            stop = False
+            for todo_widget in TodoWidget.objects:
+                if todo_widget.is_focused:
+                    todo_widget.set_focused(False)
+
+                    for todo_list_widget in TodoListWidget.objects:
+                        if todo_list_widget.todo_list != todo_widget.todo_list:
+                            continue
+
+                        for idx, todo in enumerate(todo_list_widget.todos):
+                            if todo_widget.todo in todo:
+                                current_idx = idx
+                                break
+
+                        next_idx = current_idx + 1
+                        if next_idx >= len(todo_list_widget.todos):
+                            next_idx = 0
+
+                        next_todo = todo_list_widget.todos[next_idx]
+                        for next_todo_widget in TodoWidget.objects:
+                            if next_todo_widget.todo in next_todo:
+                                next_todo_widget.set_focused(True)
+                                stop = True
+                                break
+                if stop:
+                    break
 
 
 class TodoWidget(QWidget):
 
+    objects: List[TodoWidget] = []
+
     deleted = pyqtSignal()
+    focused = pyqtSignal(bool)
 
     def __init__(self, todo_list: str, todo: str, completed: bool = False):
         super().__init__()
@@ -197,7 +301,11 @@ class TodoWidget(QWidget):
         self.todo = todo
         self.completed = completed
 
+        self.is_focused = False
+
         self.setup_ui()
+
+        TodoWidget.objects.append(self)
 
     def setup_ui(self) -> None:
         layout = QVBoxLayout()
@@ -212,12 +320,14 @@ class TodoWidget(QWidget):
         layout.addWidget(self.todo_label)
 
         self.completed_checkbox = QCheckBox("Completed")
-        self.completed_checkbox.stateChanged.connect(self.mark_completed)
         self.completed_checkbox.setChecked(self.completed)
+        self.completed_checkbox.stateChanged.connect(self.mark_completed)
+        self.completed_checkbox.setFocusPolicy(Qt.NoFocus)
         layout.addWidget(self.completed_checkbox)
 
         self.delete_button = QPushButton("Delete")
-        self.delete_button.clicked.connect(self.delete)
+        self.delete_button.pressed.connect(self.delete)
+        self.delete_button.setFocusPolicy(Qt.NoFocus)
         layout.addWidget(self.delete_button)
 
     def delete(self) -> None:
@@ -232,6 +342,54 @@ class TodoWidget(QWidget):
             if self.completed_checkbox.isChecked()
             else ""
         )
+
+    def set_focused(self, focused: bool) -> None:
+        self.is_focused = focused
+        self.setStyleSheet("background-color: #606060;" if focused else "")
+
+
+class TodoListWidget(QWidget):
+
+    objects: List[TodoListWidget] = []
+
+    def __init__(self, todo_list: str, todos: List[str]):
+        super().__init__()
+        self.todo_list = todo_list
+        self.todos = todos
+
+        self.setup_ui()
+
+        TodoListWidget.objects.append(self)
+
+    def setup_ui(self) -> None:
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        title_label = QLabel(self.todo_list)
+        title_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+        title_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title_label)
+
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Plain)
+        layout.addWidget(separator)
+
+        for todo in self.todos:
+            completed = False
+            if " (Completed)" in todo:
+                completed = True
+                todo = todo.replace(" (Completed)", "")
+            todo_widget = TodoWidget(self.todo_list, todo, completed)
+            layout.addWidget(todo_widget)
+
+            separator = QFrame()
+            separator.setFrameShape(QFrame.HLine)
+            separator.setFrameShadow(QFrame.Plain)
+            layout.addWidget(separator)
+
+        spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        layout.addItem(spacer)
 
 
 class AddTodoWidget(QDialog):
