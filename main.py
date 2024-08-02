@@ -92,6 +92,7 @@ class MainWindow(QMainWindow):
         main_layout = QHBoxLayout()
 
         TodoWidget.objects = []
+        TodoListWidget.objects = []
         for idx, todo_list in enumerate(self.todos):
             todo_list_widget = TodoListWidget(todo_list, self.todos[todo_list])
             main_layout.addWidget(todo_list_widget)
@@ -198,11 +199,22 @@ class MainWindow(QMainWindow):
                         if todo_list_widget.todo_list != todo_widget.todo_list:
                             continue
 
+                        current_idx = 0
+                        for todo_idx, todo in enumerate(todo_list_widget.todos):
+                            if todo_widget.todo in todo:
+                                current_idx = todo_idx
+                                break
+
                         next_idx = idx - 1
                         if next_idx < 0:
                             next_idx = len(TodoListWidget.objects) - 1
 
-                        next_todo = TodoListWidget.objects[next_idx].todos[0]
+                        if current_idx >= len(TodoListWidget.objects[next_idx].todos):
+                            current_idx = (
+                                len(TodoListWidget.objects[next_idx].todos) - 1
+                            )
+
+                        next_todo = TodoListWidget.objects[next_idx].todos[current_idx]
                         for next_todo_widget in TodoWidget.objects:
                             if next_todo_widget.todo in next_todo:
                                 next_todo_widget.set_focused(True)
@@ -220,11 +232,22 @@ class MainWindow(QMainWindow):
                         if todo_list_widget.todo_list != todo_widget.todo_list:
                             continue
 
+                        current_idx = 0
+                        for todo_idx, todo in enumerate(todo_list_widget.todos):
+                            if todo_widget.todo in todo:
+                                current_idx = todo_idx
+                                break
+
                         next_idx = idx + 1
                         if next_idx >= len(TodoListWidget.objects):
                             next_idx = 0
 
-                        next_todo = TodoListWidget.objects[next_idx].todos[0]
+                        if current_idx >= len(TodoListWidget.objects[next_idx].todos):
+                            current_idx = (
+                                len(TodoListWidget.objects[next_idx].todos) - 1
+                            )
+
+                        next_todo = TodoListWidget.objects[next_idx].todos[current_idx]
                         for next_todo_widget in TodoWidget.objects:
                             if next_todo_widget.todo in next_todo:
                                 next_todo_widget.set_focused(True)
