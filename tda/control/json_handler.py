@@ -57,6 +57,7 @@ def add_todo(todo_list_name: str, name: str) -> None:
         return
 
     todo_list.add_todo(name)
+    save_todos()
 
 
 def delete_todo(todo: Todo) -> None:

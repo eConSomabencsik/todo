@@ -49,7 +49,7 @@ class MainWindow(QMainWindow):
         menu_bar.addMenu(edit_menu)
 
     def __create_shortcuts(self) -> None:
-        # Tab key is not caught in 'keyPressEvent' needed to create this shortcut
+        # These keys are not caught in 'keyPressEvent' needed to create this shortcut
         tab_shortcut = QShortcut(QKeySequence(Qt.Key_Tab), self)
         tab_shortcut.activated.connect(partial(self.key_press, "Tab"))
 
@@ -67,6 +67,18 @@ class MainWindow(QMainWindow):
 
         space_shortcut = QShortcut(QKeySequence(Qt.Key_Space), self)
         space_shortcut.activated.connect(partial(self.key_press, "Space"))
+
+        ctrl_right_shortcut = QShortcut(QKeySequence("Ctrl+Right"), self)
+        ctrl_right_shortcut.activated.connect(partial(self.key_press, "Ctrl_right"))
+
+        ctrl_left_shortcut = QShortcut(QKeySequence("Ctrl+Left"), self)
+        ctrl_left_shortcut.activated.connect(partial(self.key_press, "Ctrl_left"))
+
+        ctrl_up_shortcut = QShortcut(QKeySequence("Ctrl+Up"), self)
+        ctrl_up_shortcut.activated.connect(partial(self.key_press, "Ctrl_up"))
+
+        ctrl_down_shortcut = QShortcut(QKeySequence("Ctrl+Down"), self)
+        ctrl_down_shortcut.activated.connect(partial(self.key_press, "Ctrl_down"))
 
     def __init__(self) -> None:
         super().__init__()
@@ -204,3 +216,82 @@ class MainWindow(QMainWindow):
 
             current_focused_todo.set_focus(False)
             current_todo_list.todo_widgets[current_widget_idx].set_focus(True)
+        elif key == "Ctrl_right":
+            if len(TodoListWidget.objects) == 1:
+                return
+
+            current_list_widget_idx += 1
+
+            if current_list_widget_idx >= len(TodoListWidget.objects):
+                current_list_widget_idx = 0
+
+            next_list_widget = TodoListWidget.objects[current_list_widget_idx]
+
+            json_handler.delete_todo(current_focused_todo.todo)
+            json_handler.add_todo(
+                next_list_widget.todo_list.name, current_focused_todo.todo.name
+            )
+
+            next_list_widget_idx = TodoListWidget.objects.index(next_list_widget)
+            self.setup_ui()
+            TodoListWidget.objects[next_list_widget_idx].todo_widgets[-1].set_focus(
+                True
+            )
+        elif key == "Ctrl_left":
+            if len(TodoListWidget.objects) == 1:
+                return
+
+            current_list_widget_idx -= 1
+
+            if current_list_widget_idx < 0:
+                current_list_widget_idx = len(TodoListWidget.objects) - 1
+
+            next_list_widget = TodoListWidget.objects[current_list_widget_idx]
+
+            json_handler.delete_todo(current_focused_todo.todo)
+            json_handler.add_todo(
+                next_list_widget.todo_list.name, current_focused_todo.todo.name
+            )
+
+            next_list_widget_idx = TodoListWidget.objects.index(next_list_widget)
+            self.setup_ui()
+            TodoListWidget.objects[next_list_widget_idx].todo_widgets[-1].set_focus(
+                True
+            )
+        elif key == "Ctrl_up":
+            other_widget_idx = current_widget_idx - 1
+
+            (
+                current_todo_list.todo_list.todos[current_widget_idx],
+                current_todo_list.todo_list.todos[other_widget_idx],
+            ) = (
+                current_todo_list.todo_list.todos[other_widget_idx],
+                current_todo_list.todo_list.todos[current_widget_idx],
+            )
+
+            json_handler.save_todos()
+            self.setup_ui()
+
+            TodoListWidget.objects[current_list_widget_idx].todo_widgets[
+                other_widget_idx
+            ].set_focus(True)
+        elif key == "Ctrl_down":
+            other_widget_idx = current_widget_idx + 1
+
+            if other_widget_idx >= len(current_todo_list.todo_list.todos):
+                other_widget_idx = 0
+
+            (
+                current_todo_list.todo_list.todos[current_widget_idx],
+                current_todo_list.todo_list.todos[other_widget_idx],
+            ) = (
+                current_todo_list.todo_list.todos[other_widget_idx],
+                current_todo_list.todo_list.todos[current_widget_idx],
+            )
+
+            json_handler.save_todos()
+            self.setup_ui()
+
+            TodoListWidget.objects[current_list_widget_idx].todo_widgets[
+                other_widget_idx
+            ].set_focus(True)
