@@ -80,6 +80,12 @@ class MainWindow(QMainWindow):
         ctrl_down_shortcut = QShortcut(QKeySequence("Ctrl+Down"), self)
         ctrl_down_shortcut.activated.connect(partial(self.key_press, "Ctrl_down"))
 
+        ctrl_shift_up = QShortcut(QKeySequence("Ctrl+Shift+Up"), self)
+        ctrl_shift_up.activated.connect(partial(self.key_press, "Ctrl_shift_up"))
+
+        ctrl_shift_down = QShortcut(QKeySequence("Ctrl+Shift+Down"), self)
+        ctrl_shift_down.activated.connect(partial(self.key_press, "Ctrl_shift_down"))
+
     def __init__(self) -> None:
         super().__init__()
         self.__create_menu_bar()
@@ -295,3 +301,37 @@ class MainWindow(QMainWindow):
             TodoListWidget.objects[current_list_widget_idx].todo_widgets[
                 other_widget_idx
             ].set_focus(True)
+        elif key == "Ctrl_shift_up":
+            for todo_idx in range(current_widget_idx, 0, -1):
+                (
+                    current_todo_list.todo_list.todos[todo_idx],
+                    current_todo_list.todo_list.todos[todo_idx - 1],
+                ) = (
+                    current_todo_list.todo_list.todos[todo_idx - 1],
+                    current_todo_list.todo_list.todos[todo_idx],
+                )
+
+            json_handler.save_todos()
+            self.setup_ui()
+
+            TodoListWidget.objects[current_list_widget_idx].todo_widgets[0].set_focus(
+                True
+            )
+        elif key == "Ctrl_shift_down":
+            for todo_idx in range(
+                current_widget_idx, len(current_todo_list.todo_list.todos) - 1
+            ):
+                (
+                    current_todo_list.todo_list.todos[todo_idx],
+                    current_todo_list.todo_list.todos[todo_idx + 1],
+                ) = (
+                    current_todo_list.todo_list.todos[todo_idx + 1],
+                    current_todo_list.todo_list.todos[todo_idx],
+                )
+
+            json_handler.save_todos()
+            self.setup_ui()
+
+            TodoListWidget.objects[current_list_widget_idx].todo_widgets[-1].set_focus(
+                True
+            )
