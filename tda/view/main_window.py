@@ -16,6 +16,7 @@ from tda.control import json_handler
 from tda.view.dialogs.add_todo import AddTodoDialog
 from tda.view.dialogs.add_todo_list import AddTodoListDialog
 from tda.view.dialogs.delete_todo_list import DeleteTodoList
+from tda.view.dialogs.todo_detail import TodoDetail
 from tda.view.widgets.todo_list_widget import TodoListWidget
 from tda.view.widgets.todo_widget import TodoWidget
 
@@ -67,6 +68,11 @@ class MainWindow(QMainWindow):
 
         space_shortcut = QShortcut(QKeySequence(Qt.Key_Space), self)
         space_shortcut.activated.connect(partial(self.key_press, "Space"))
+
+        return_shortcut = QShortcut(QKeySequence(Qt.Key_Return), self)
+        return_shortcut.activated.connect(partial(self.key_press, "Enter"))
+        enter_shortcut = QShortcut(QKeySequence(Qt.Key_Enter), self)
+        enter_shortcut.activated.connect(partial(self.key_press, "Enter"))
 
         ctrl_right_shortcut = QShortcut(QKeySequence("Ctrl+Right"), self)
         ctrl_right_shortcut.activated.connect(partial(self.key_press, "Ctrl_right"))
@@ -151,6 +157,13 @@ class MainWindow(QMainWindow):
                     break
                 if first_todo_widget is None:
                     first_todo_widget = todo
+
+        if key == "Enter":
+            if TodoDetail(
+                current_focused_todo.todo, current_todo_list.todo_list
+            ).exec_():
+                self.setup_ui()
+                return
 
         if key == "Tab":
             if current_focused_todo is not None:
